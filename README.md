@@ -4,12 +4,9 @@ IOTWatch adalah sistem monitoring dan kontrol suhu IoT real-time yang mengintegr
 
 📋 Daftar Isi
 - [Fitur Utama](#fitur-utama)
-- [Arsitektur Sistem](#arsitektur-sistem)
 - [Instalasi & Setup](#instalasi--setup)
 - [Menjalankan Proyek](#menjalankan-proyek)
 - [Konfigurasi Environment](#konfigurasi-environment)
-- [API Endpoints](#api-endpoints)
-- [Troubleshooting](#troubleshooting)
 
 ✨ Fitur Utama
 
