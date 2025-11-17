@@ -21,40 +21,6 @@ IOTWatch adalah sistem monitoring dan kontrol suhu IoT real-time yang mengintegr
 - **Sensor Simulator**: Simulator IoT untuk testing tanpa hardware fisik
 - **Responsive UI**: Interface mobile modern dengan React Native + Expo
 
-🏗️ Arsitektur Sistem
-┌─────────────────────────────────────────────────────────────┐
-│ Mobile App (Expo) │
-│ React Native + Expo + Redux/Context + Supabase Auth │
-└────────────┬────────────────────────────────────────────────┘
-│
-│ REST API (HTTP)
-│
-┌────────────▼────────────────────────────────────────────────┐
-│ Backend API (Node.js) │
-│ Express + Supabase + PostgreSQL + Authentication │
-│ • /api/readings (sensor data) │
-│ • /api/thresholds (threshold management) │
-│ • /api/notifications (push alerts) │
-└────────┬──────────────────────────────────────────────┬─────┘
-│ │
-MQTT │ API │
-pub │ │
-│ │
-┌────────▼────────────────┐ ┌─────────────▼─────┐
-│ MQTT Broker │ │ Expo Push Service│
-│ (HiveMQ/Mosquitto) │ │ (Notifications) │
-└─────────┬────────────────┘ └───────────────────┘
-│
-│ MQTT sub
-│
-┌─────────▼────────────────┐
-│ Sensor Simulator / IoT │
-│ Device (Node.js) │
-│ • Publish sensor data │
-│ • Fetch thresholds │
-│ • Save readings │
-└──────────────────────────┘
-
 
 📦 Instalasi & Setup
 
@@ -195,25 +161,7 @@ eas project:init
 # Project ID akan di-generate dan disimpan di app.json
 ```
 
-📡 API Endpoints
-Authentication
-POST /api/auth/register - Register user baru
-POST /api/auth/login - Login user
-POST /api/auth/logout - Logout
-Readings (Data Sensor)
-GET /api/readings - Ambil semua data sensor
-GET /api/readings/:id - Ambil data sensor by ID
-POST /api/readings - Simpan data sensor baru (requires auth + DEVICE_API_KEY)
-Thresholds
-GET /api/thresholds - Ambil semua threshold
-GET /api/thresholds/latest - Ambil threshold terbaru
-POST /api/thresholds - Buat threshold baru (requires auth)
-PUT /api/thresholds/:id - Update threshold (requires auth)
-DELETE /api/thresholds/:id - Hapus threshold (requires auth)
-Notifications
-POST /api/notifications - Kirim notifikasi push (requires auth atau DEVICE_API_KEY)
-POST /api/notifications/send - Kirim notifikasi dengan sensor data (requires SENSOR_API_KEY)
-GET /api/notifications/history - Ambil history notifikasi (requires auth)
+
 
 
 
