@@ -9,7 +9,6 @@ const MQTT_BROKER = process.env.MQTT_BROKER || "mqtt://broker.hivemq.com";
 const TOPIC = process.env.MQTT_TOPIC || "ppb/kel24/iot/temperature";
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:5000";
 const DEVICE_API_KEY = process.env.DEVICE_API_KEY;
-const EXPO_PUSH_TOKEN = process.env.EXPO_PUSH_TOKEN; // Add this
 const THRESHOLD_CHECK_INTERVAL = 5000;
 
 // Validate configuration
