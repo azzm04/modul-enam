@@ -1,127 +1,198 @@
+// sensor-simulator/index.js - FINAL WORKING VERSION
 import mqtt from "mqtt";
 import dotenv from "dotenv";
+import fetch from "node-fetch";
 
 dotenv.config();
 
-const BROKER_URL = "mqtt://broker.hivemq.com:1883";
-const TOPIC = "ppb/kel24/iot/temperature";
-const BACKEND_BASE_URL = "http://localhost:5000";
-const PUBLISH_INTERVAL_MS = 5000;
+const MQTT_BROKER = process.env.MQTT_BROKER || "mqtt://broker.hivemq.com";
+const TOPIC = process.env.MQTT_TOPIC || "ppb/kel24/iot/temperature";
+const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:5000";
+const DEVICE_API_KEY = process.env.DEVICE_API_KEY;
+const THRESHOLD_CHECK_INTERVAL = 5000;
 
-// Ganti token ini dengan Expo Push Token perangkat kamu
-// (bisa didapat dari app React Native menggunakan expo-notifications)
-const EXPO_PUSH_TOKEN = "ExponentPushToken[DoPwVLGiDwAfdEeJJsVPTx]";
+// Validate configuration
+if (!DEVICE_API_KEY) {
+  console.error("❌ ERROR: DEVICE_API_KEY not found in .env file!");
+  console.error("Please add: DEVICE_API_KEY=your-key-here");
+  process.exit(1);
+}
 
-// Optional shared API key for authenticating with the backend
-const SENSOR_API_KEY = process.env.SENSOR_API_KEY || null;
+let currentThreshold = 30;
 
-const clientId = `simulator-${Math.random().toString(16).slice(2)}`;
-const client = mqtt.connect(BROKER_URL, {
-  clientId,
-  clean: true,
-  reconnectPeriod: 5000,
-});
+// Connect to MQTT broker
+const client = mqtt.connect(MQTT_BROKER);
 
 client.on("connect", () => {
-  console.log(`✅ MQTT connected as ${clientId}`);
+  console.log(`✅ Connected to MQTT broker: ${MQTT_BROKER}`);
+  console.log(`📡 Publishing to topic: ${TOPIC}`);
+  console.log(`🔗 Backend API: ${BACKEND_URL}`);
+  console.log(`🔑 Using Device API Key: ${DEVICE_API_KEY.substring(0, 10)}...`);
+  console.log("");
+  
+  startSimulation();
+  startThresholdChecker();
 });
 
-client.on("reconnect", () => {
-  console.log("♻️ Reconnecting to MQTT broker...");
+client.on("error", (err) => {
+  console.error("❌ MQTT connection error:", err);
 });
 
-client.on("error", (error) => {
-  console.error("❌ MQTT error:", error.message);
-});
-
-async function fetchLatestThreshold() {
+// Fetch current threshold from backend
+async function fetchCurrentThreshold() {
   try {
-    const response = await fetch(`${BACKEND_BASE_URL}/api/thresholds/latest`);
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    return data?.value ?? null;
+    const response = await fetch(`${BACKEND_URL}/api/thresholds/latest`);
+    if (response.ok) {
+      const data = await response.json();
+      if (data && data.value !== undefined) {
+        currentThreshold = data.value;
+        console.log(`📊 Current threshold updated: ${currentThreshold}°C`);
+      }
+    }
   } catch (error) {
     console.error("⚠️ Failed to fetch threshold:", error.message);
-    return null;
   }
 }
 
-async function publishLoop() {
-  let latestThreshold = await fetchLatestThreshold();
-
-  setInterval(async () => {
-    const temperature = Number((Math.random() * 15 + 20).toFixed(2));
-    const payload = JSON.stringify({
-      temperature,
-      timestamp: new Date().toISOString(),
-    });
-
-    // Publikasi suhu ke MQTT
-    client.publish(TOPIC, payload, { qos: 0 }, (error) => {
-      if (error) {
-        console.error("Failed to publish temperature:", error.message);
-      } else {
-        console.log(`📡 Published ${payload} to ${TOPIC}`);
-      }
-    });
-
-    // Ambil threshold baru kadang-kadang (simulasi dinamis)
-    if (latestThreshold === null || Math.random() < 0.2) {
-      latestThreshold = await fetchLatestThreshold();
-    }
-
-    // Cek apakah suhu melampaui ambang batas
-    if (typeof latestThreshold === "number" && temperature >= latestThreshold) {
-      try {
-        // Simpan data ke backend (sudah ada)
-        const readingsHeaders = {
-          "Content-Type": "application/json",
-          ...(SENSOR_API_KEY && { "x-api-key": SENSOR_API_KEY }),
-        };
-
-        const response = await fetch(`${BACKEND_BASE_URL}/api/readings`, {
-          method: "POST",
-          headers: readingsHeaders,
-          body: JSON.stringify({
-            temperature,
-            threshold_value: latestThreshold,
-          }),
-        });
-
-        if (!response.ok) {
-          const text = await response.text();
-          throw new Error(`HTTP ${response.status}: ${text}`);
-        }
-
-        console.log(
-          `🔥 Saved triggered reading ${temperature}°C (threshold ${latestThreshold}°C)`
-        );
-
-        // Kirim notifikasi ke backend untuk diteruskan ke Expo API
-        const notifHeaders = {
-          "Content-Type": "application/json",
-          ...(SENSOR_API_KEY && { "x-api-key": SENSOR_API_KEY }),
-        };
-
-        await fetch(`${BACKEND_BASE_URL}/api/notifications`, {
-          method: "POST",
-          headers: notifHeaders,
-          body: JSON.stringify({
-            token: EXPO_PUSH_TOKEN,
-            title: "⚠️ Suhu Melebihi Batas!",
-            message: `Suhu ${temperature}°C melampaui ambang ${latestThreshold}°C.`,
-          }),
-        });
-
-        console.log("📨 Notification request sent to backend");
-      } catch (error) {
-        console.error("❌ Failed to save or notify:", error.message);
-      }
-    }
-  }, PUBLISH_INTERVAL_MS);
+// Check threshold periodically
+function startThresholdChecker() {
+  fetchCurrentThreshold();
+  setInterval(fetchCurrentThreshold, THRESHOLD_CHECK_INTERVAL);
 }
 
-publishLoop().catch((error) => {
-  console.error("🚫 Simulator failed to start:", error.message);
-  process.exit(1);
+// Generate random temperature
+function generateTemperature() {
+  return (Math.random() * 20 + 20).toFixed(2);
+}
+
+// Save reading to backend if threshold exceeded
+async function saveReading(temperature, timestamp, thresholdValue) {
+  const url = `${BACKEND_URL}/api/readings`;
+  const headers = {
+    "Content-Type": "application/json",
+    "X-Device-API-Key": DEVICE_API_KEY,
+  };
+  
+  console.log(`🔍 Saving to: ${url}`);
+  console.log(`🔍 Headers:`, headers);
+  
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: headers,
+      body: JSON.stringify({
+        temperature: parseFloat(temperature),
+        timestamp: timestamp,
+        threshold_value: parseFloat(thresholdValue),
+      }),
+    });
+
+    const responseText = await response.text();
+    console.log(`📥 Response status: ${response.status}`);
+    console.log(`📥 Response body: ${responseText}`);
+
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = JSON.parse(responseText);
+      } catch {
+        errorData = { message: responseText };
+      }
+      throw new Error(`HTTP ${response.status}: ${JSON.stringify(errorData)}`);
+    }
+
+    console.log(`💾 ✅ Saved to database: ${temperature}°C (threshold: ${thresholdValue}°C)`);
+    return JSON.parse(responseText);
+  } catch (error) {
+    console.error("❌ Failed to save reading:", error.message);
+    throw error;
+  }
+}
+
+// Send notification
+async function sendNotification(temperature, threshold) {
+  const url = `${BACKEND_URL}/api/notifications/send`;
+  const headers = {
+    "Content-Type": "application/json",
+    "X-Device-API-Key": DEVICE_API_KEY,
+  };
+  
+  console.log(`🔍 Sending notification to: ${url}`);
+  
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: headers,
+      body: JSON.stringify({
+        title: "🚨 Temperature Alert!",
+        body: `Temperature ${temperature}°C exceeded threshold ${threshold}°C`,
+        data: { temperature, threshold, timestamp: new Date().toISOString() },
+      }),
+    });
+
+    const responseText = await response.text();
+    console.log(`📥 Notification response: ${response.status} - ${responseText}`);
+
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = JSON.parse(responseText);
+      } catch {
+        errorData = { message: responseText };
+      }
+      throw new Error(`HTTP ${response.status}: ${JSON.stringify(errorData)}`);
+    }
+
+    console.log(`🔔 ✅ Notification sent: ${temperature}°C > ${threshold}°C`);
+    return JSON.parse(responseText);
+  } catch (error) {
+    console.error("❌ Failed to send notification:", error.message);
+    throw error;
+  }
+}
+
+// Main simulation loop
+function startSimulation() {
+  setInterval(async () => {
+    const temperature = parseFloat(generateTemperature());
+    const timestamp = new Date().toISOString();
+
+    const payload = {
+      temperature,
+      timestamp,
+    };
+
+    // Publish to MQTT
+    client.publish(TOPIC, JSON.stringify(payload), (err) => {
+      if (err) {
+        console.error("❌ Failed to publish:", err);
+      } else {
+        console.log(`📡 Published ${JSON.stringify(payload)} to ${TOPIC}`);
+      }
+    });
+
+    // Check threshold and save if exceeded
+    if (temperature > currentThreshold) {
+      console.log(`⚠️ ALERT: Temperature ${temperature}°C exceeds threshold ${currentThreshold}°C`);
+      console.log("");
+      
+      try {
+        await saveReading(temperature, timestamp, currentThreshold);
+        await sendNotification(temperature, currentThreshold);
+        console.log("✅ Alert processing completed");
+      } catch (error) {
+        console.error("❌ Alert processing failed");
+      }
+      console.log("");
+    }
+  }, 5000);
+}
+
+// Graceful shutdown
+process.on("SIGINT", () => {
+  console.log("\n👋 Shutting down sensor simulator...");
+  client.end();
+  process.exit();
 });
+
+console.log("🚀 Sensor Simulator Starting...");

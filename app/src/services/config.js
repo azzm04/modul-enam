@@ -5,7 +5,7 @@ const extra = Constants.expoConfig?.extra ?? {};
 export const BACKEND_URL = extra.backendUrl;
 export const MQTT_BROKER_URL = extra.mqtt?.brokerUrl;
 export const MQTT_TOPIC = extra.mqtt?.topic;
-export const API_URL="http://192.168.1.84:5000";
+export const API_URL="http://192.168.0.107:5000";
 
 export function assertConfig() {
   if (!BACKEND_URL) {

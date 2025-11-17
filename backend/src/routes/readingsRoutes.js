@@ -2,6 +2,8 @@
 import express from "express";
 import { ReadingsController } from "../controllers/readingsController.js";
 import { authenticateToken, optionalAuth } from "../middleware/authMiddleware.js";
+import { authenticateUserOrDevice } from "../middleware/deviceAuthMiddleware.js";
+
 
 const router = express.Router();
 
@@ -10,6 +12,6 @@ router.get("/", ReadingsController.list);
 router.get("/latest", ReadingsController.latest);
 
 // Protected routes - only authenticated users or sensor devices can create
-router.post("/", authenticateToken, ReadingsController.create);
+router.post("/", authenticateUserOrDevice, ReadingsController.create);
 
 export default router;

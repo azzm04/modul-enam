@@ -33,7 +33,7 @@
     "extra": {
       "supabaseUrl": "https://xhgheezeiqqdqgccsuet.supabase.co",
       "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhoZ2hlZXplaXFxZHFnY2NzdWV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0MTU5ODAsImV4cCI6MjA3Nzk5MTk4MH0.cdq4sUXT8PS7w7TqidHIxCTNH7s85uohXK0-YGpd57M",
-      "backendUrl": "http://192.168.1.84:5000",
+      "backendUrl": "http://192.168.0.107:5000",
       "mqtt": {
         "brokerUrl": "wss://broker.hivemq.com:8884/mqtt",
         "topic": "ppb/kel24/iot/temperature"
