@@ -9,6 +9,7 @@ const MQTT_BROKER = process.env.MQTT_BROKER || "mqtt://broker.hivemq.com";
 const TOPIC = process.env.MQTT_TOPIC || "ppb/kel24/iot/temperature";
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:5000";
 const DEVICE_API_KEY = process.env.DEVICE_API_KEY;
+const EXPO_PUSH_TOKEN = process.env.EXPO_PUSH_TOKEN; // Add this
 const THRESHOLD_CHECK_INTERVAL = 5000;
 
 // Validate configuration
@@ -109,7 +110,7 @@ async function saveReading(temperature, timestamp, thresholdValue) {
   }
 }
 
-// Send notification
+// Send notification (optional - won't fail if no token)
 async function sendNotification(temperature, threshold) {
   const url = `${BACKEND_URL}/api/notifications/send`;
   const headers = {
@@ -127,27 +128,30 @@ async function sendNotification(temperature, threshold) {
         title: "🚨 Temperature Alert!",
         body: `Temperature ${temperature}°C exceeded threshold ${threshold}°C`,
         data: { temperature, threshold, timestamp: new Date().toISOString() },
+        // No token - IoT device doesn't have push token
       }),
     });
 
     const responseText = await response.text();
-    console.log(`📥 Notification response: ${response.status} - ${responseText}`);
+    const responseData = JSON.parse(responseText);
+    
+    console.log(`📥 Notification response: ${response.status}`);
+
+    if (responseData.skipped) {
+      console.log(`ℹ️ Notification skipped (no push token - this is normal for IoT devices)`);
+      return responseData;
+    }
 
     if (!response.ok) {
-      let errorData;
-      try {
-        errorData = JSON.parse(responseText);
-      } catch {
-        errorData = { message: responseText };
-      }
-      throw new Error(`HTTP ${response.status}: ${JSON.stringify(errorData)}`);
+      throw new Error(`HTTP ${response.status}: ${responseText}`);
     }
 
     console.log(`🔔 ✅ Notification sent: ${temperature}°C > ${threshold}°C`);
-    return JSON.parse(responseText);
+    return responseData;
   } catch (error) {
-    console.error("❌ Failed to send notification:", error.message);
-    throw error;
+    // Don't throw - notification is optional
+    console.log(`ℹ️ Notification not sent (IoT devices don't send push notifications): ${error.message}`);
+    return { success: false, error: error.message };
   }
 }
 
@@ -177,11 +181,16 @@ function startSimulation() {
       console.log("");
       
       try {
+        // Save reading is critical - must succeed
         await saveReading(temperature, timestamp, currentThreshold);
+        
+        // Notification is optional - won't fail if unsuccessful
         await sendNotification(temperature, currentThreshold);
+        
         console.log("✅ Alert processing completed");
       } catch (error) {
-        console.error("❌ Alert processing failed");
+        // Only saveReading errors reach here
+        console.error("❌ Failed to save reading:", error.message);
       }
       console.log("");
     }
