@@ -6,11 +6,13 @@ export const NotificationsController = {
     try {
       const { token, title, body, message, data } = req.body;
 
-      // Validate required fields
+      // If no token provided (e.g., from IoT device), return success without sending
       if (!token) {
-        return res.status(400).json({ 
-          error: "Token required",
-          message: "Push notification token is required" 
+        console.log("ℹ️ No push token provided - skipping notification");
+        return res.json({ 
+          success: true,
+          skipped: true,
+          message: "No push token provided - notification skipped"
         });
       }
 
