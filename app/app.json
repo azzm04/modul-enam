@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "projectId": "fbe0cd76-20e8-46a9-bb18-ea187ab2abbc",
+    "name": "IOTWatch",
+    "slug": "iotwatch-slug",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourcompany.iotwatch"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#2563eb"
+      },
+      "package": "com.yourcompany.iotwatch"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "supabaseUrl": "https://xhgheezeiqqdqgccsuet.supabase.co",
+      "supabaseAnonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhoZ2hlZXplaXFxZHFnY2NzdWV0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjI0MTU5ODAsImV4cCI6MjA3Nzk5MTk4MH0.cdq4sUXT8PS7w7TqidHIxCTNH7s85uohXK0-YGpd57M",
+      "backendUrl": "http://192.168.1.84:5000",
+      "mqtt": {
+        "brokerUrl": "wss://broker.hivemq.com:8884/mqtt",
+        "topic": "ppb/kel24/iot/temperature"
+      }
+    },
+    "plugins": ["expo-notifications", "expo-font"]
+  }
+}
